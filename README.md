@@ -1,3 +1,6 @@
+# Forked from https://github.com/4sval/FModel
+
+
 FModel - An Unreal Engine Archives Explorer in C#
 ------------------------------------------
 
