@@ -87,28 +87,28 @@ public class GameSelectorViewModel : ViewModel
             .OrderBy(value => ((int)value & 0xFF) == 0);
     private IEnumerable<DirectorySettings> EnumerateDetectedGames()
     {
-        yield return GetUnrealEngineGame("Fortnite", "\\FortniteGame\\Content\\Paks", EGame.GAME_UE5_6);
-        yield return DirectorySettings.Default("Fortnite [LIVE]", Constants._FN_LIVE_TRIGGER, ue: EGame.GAME_UE5_6);
-        yield return GetUnrealEngineGame("Pewee", "\\RogueCompany\\Content\\Paks", EGame.GAME_RogueCompany);
-        yield return GetUnrealEngineGame("Rosemallow", "\\Indiana\\Content\\Paks", EGame.GAME_UE4_21);
-        yield return GetUnrealEngineGame("Catnip", "\\OakGame\\Content\\Paks", EGame.GAME_Borderlands3);
-        yield return GetUnrealEngineGame("AzaleaAlpha", "\\Prospect\\Content\\Paks", EGame.GAME_UE4_27);
-        yield return GetUnrealEngineGame("shoebill", "\\SwGame\\Content\\Paks", EGame.GAME_StarWarsJediFallenOrder);
-        yield return GetUnrealEngineGame("Snoek", "\\StateOfDecay2\\Content\\Paks", EGame.GAME_StateOfDecay2);
-        yield return GetUnrealEngineGame("711c5e95dc094ca58e5f16bd48e751d6", "\\MultiVersus\\Content\\Paks", EGame.GAME_UE4_26);
-        yield return GetUnrealEngineGame("9361c8c6d2f34b42b5f2f61093eedf48", "\\TslGame\\Content\\Paks", EGame.GAME_PlayerUnknownsBattlegrounds);
-        yield return GetRiotGame("VALORANT", "ShooterGame\\Content\\Paks", EGame.GAME_Valorant);
-        yield return DirectorySettings.Default("VALORANT [LIVE]", Constants._VAL_LIVE_TRIGGER, ue: EGame.GAME_Valorant);
-        yield return GetSteamGame(381210, "\\DeadByDaylight\\Content\\Paks", EGame.GAME_UE4_27); // Dead By Daylight
-        yield return GetSteamGame(578080, "\\TslGame\\Content\\Paks", EGame.GAME_PlayerUnknownsBattlegrounds); // PUBG
-        yield return GetSteamGame(1172380, "\\SwGame\\Content\\Paks", EGame.GAME_StarWarsJediFallenOrder); // STAR WARS Jedi: Fallen Order™
-        yield return GetSteamGame(677620, "\\PortalWars\\Content\\Paks", EGame.GAME_Splitgate); // Splitgate
-        yield return GetSteamGame(1172620, "\\Athena\\Content\\Paks", EGame.GAME_SeaOfThieves); // Sea of Thieves
-        yield return GetSteamGame(1665460, "\\pak", EGame.GAME_UE4_26); // eFootball 2023
-        yield return GetRockstarGamesGame("GTA III - Definitive Edition", "\\Gameface\\Content\\Paks", EGame.GAME_GTATheTrilogyDefinitiveEdition);
-        yield return GetRockstarGamesGame("GTA San Andreas - Definitive Edition", "\\Gameface\\Content\\Paks", EGame.GAME_GTATheTrilogyDefinitiveEdition);
-        yield return GetRockstarGamesGame("GTA Vice City - Definitive Edition", "\\Gameface\\Content\\Paks", EGame.GAME_GTATheTrilogyDefinitiveEdition);
-        yield return GetLevelInfiniteGame("tof_launcher", "\\Hotta\\Content\\Paks", EGame.GAME_TowerOfFantasy);
+        // yield return GetUnrealEngineGame("Fortnite", "\\FortniteGame\\Content\\Paks", EGame.GAME_UE5_6);
+        // yield return DirectorySettings.Default("Fortnite [LIVE]", Constants._FN_LIVE_TRIGGER, ue: EGame.GAME_UE5_6);
+        // yield return GetUnrealEngineGame("Pewee", "\\RogueCompany\\Content\\Paks", EGame.GAME_RogueCompany);
+        // yield return GetUnrealEngineGame("Rosemallow", "\\Indiana\\Content\\Paks", EGame.GAME_UE4_21);
+        // yield return GetUnrealEngineGame("Catnip", "\\OakGame\\Content\\Paks", EGame.GAME_Borderlands3);
+        // yield return GetUnrealEngineGame("AzaleaAlpha", "\\Prospect\\Content\\Paks", EGame.GAME_UE4_27);
+        // yield return GetUnrealEngineGame("shoebill", "\\SwGame\\Content\\Paks", EGame.GAME_StarWarsJediFallenOrder);
+        // yield return GetUnrealEngineGame("Snoek", "\\StateOfDecay2\\Content\\Paks", EGame.GAME_StateOfDecay2);
+        // yield return GetUnrealEngineGame("711c5e95dc094ca58e5f16bd48e751d6", "\\MultiVersus\\Content\\Paks", EGame.GAME_UE4_26);
+        // yield return GetUnrealEngineGame("9361c8c6d2f34b42b5f2f61093eedf48", "\\TslGame\\Content\\Paks", EGame.GAME_PlayerUnknownsBattlegrounds);
+        // yield return GetRiotGame("VALORANT", "ShooterGame\\Content\\Paks", EGame.GAME_Valorant);
+        // yield return DirectorySettings.Default("VALORANT [LIVE]", Constants._VAL_LIVE_TRIGGER, ue: EGame.GAME_Valorant);
+        // yield return GetSteamGame(381210, "\\DeadByDaylight\\Content\\Paks", EGame.GAME_UE4_27); // Dead By Daylight
+        // yield return GetSteamGame(578080, "\\TslGame\\Content\\Paks", EGame.GAME_PlayerUnknownsBattlegrounds); // PUBG
+        // yield return GetSteamGame(1172380, "\\SwGame\\Content\\Paks", EGame.GAME_StarWarsJediFallenOrder); // STAR WARS Jedi: Fallen Order™
+        // yield return GetSteamGame(677620, "\\PortalWars\\Content\\Paks", EGame.GAME_Splitgate); // Splitgate
+        // yield return GetSteamGame(1172620, "\\Athena\\Content\\Paks", EGame.GAME_SeaOfThieves); // Sea of Thieves
+        // yield return GetSteamGame(1665460, "\\pak", EGame.GAME_UE4_26); // eFootball 2023
+        // yield return GetRockstarGamesGame("GTA III - Definitive Edition", "\\Gameface\\Content\\Paks", EGame.GAME_GTATheTrilogyDefinitiveEdition);
+        // yield return GetRockstarGamesGame("GTA San Andreas - Definitive Edition", "\\Gameface\\Content\\Paks", EGame.GAME_GTATheTrilogyDefinitiveEdition);
+        // yield return GetRockstarGamesGame("GTA Vice City - Definitive Edition", "\\Gameface\\Content\\Paks", EGame.GAME_GTATheTrilogyDefinitiveEdition);
+        // yield return GetLevelInfiniteGame("tof_launcher", "\\Hotta\\Content\\Paks", EGame.GAME_TowerOfFantasy);
     }
 
     private LauncherInstalled _launcherInstalled;

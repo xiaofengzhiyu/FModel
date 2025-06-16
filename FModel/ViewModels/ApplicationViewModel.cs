@@ -111,8 +111,9 @@ public class ApplicationViewModel : ViewModel
     public DirectorySettings AvoidEmptyGameDirectory(bool bAlreadyLaunched)
     {
         var gameDirectory = UserSettings.Default.GameDirectory;
-        if (!bAlreadyLaunched && UserSettings.Default.PerDirectory.TryGetValue(gameDirectory, out var currentDir))
-            return currentDir;
+        //总是显示选择PAK的界面 ==>GameSelectorViewModel
+        // if (!bAlreadyLaunched && UserSettings.Default.PerDirectory.TryGetValue(gameDirectory, out var currentDir))
+        //     return currentDir;
 
         var gameLauncherViewModel = new GameSelectorViewModel(gameDirectory);
         var result = new DirectorySelector(gameLauncherViewModel).ShowDialog();
@@ -224,6 +225,12 @@ public class ApplicationViewModel : ViewModel
         var imgui = "imgui.ini";
         var imguiPath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", imgui);
 
+        // 判断imgui
+        if (new FileInfo(imguiPath).Length > 0)
+        {
+            return;
+        }
+        
         if (File.Exists(imgui)) File.Move(imgui, imguiPath, true);
         if (File.Exists(imguiPath) && !forceDownload) return;
 

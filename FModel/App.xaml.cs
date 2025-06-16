@@ -98,7 +98,8 @@ public partial class App
             UserSettings.Default.ModelDirectory = Path.Combine(UserSettings.Default.OutputDirectory, "Exports");
         }
 
-        Directory.CreateDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FModel"));
+        // 去除在用户目录创建配置文件的逻辑
+        //Directory.CreateDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FModel"));
         Directory.CreateDirectory(Path.Combine(UserSettings.Default.OutputDirectory, "Backups"));
         if (createMe) Directory.CreateDirectory(Path.Combine(UserSettings.Default.OutputDirectory, "Exports"));
         Directory.CreateDirectory(Path.Combine(UserSettings.Default.OutputDirectory, "Logs"));
