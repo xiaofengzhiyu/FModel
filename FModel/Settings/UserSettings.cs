@@ -22,10 +22,15 @@ namespace FModel.Settings
     public sealed class UserSettings : ViewModel
     {
         public static UserSettings Default { get; set; }
+        // 获取当前程序目录
+        public static readonly string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
 #if DEBUG
-        public static readonly string FilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FModel", "AppSettings_Debug.json");
+        public static readonly string FilePath = Path.Combine(appDirectory, "AppSettings_Debug.json");
+        //public static readonly string FilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FModel", "AppSettings_Debug.json");
 #else
-        public static readonly string FilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FModel", "AppSettings.json");
+        // 获取AppSettings配置文件
+        public static readonly string FilePath = Path.Combine(appDirectory, "AppSettings.json");
+        //public static readonly string FilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FModel", "AppSettings.json");
 #endif
 
         static UserSettings()
@@ -37,8 +42,13 @@ namespace FModel.Settings
         public static void Save()
         {
             if (!_bSave || Default == null) return;
-            Default.PerDirectory[Default.CurrentDir.GameDirectory] = Default.CurrentDir;
-            File.WriteAllText(FilePath, JsonConvert.SerializeObject(Default, Formatting.Indented));
+            // 在保存的时候,需要修改AppSettings,先读取最新的,然后再插入自身的信息即可
+            // 始终保持读取的是最新的配置文件
+           
+            var Ori_Default = JsonConvert.DeserializeObject<UserSettings>(
+                File.ReadAllText(FilePath), JsonNetSerializer.SerializerSettings);
+            Ori_Default.PerDirectory[Default.CurrentDir.GameDirectory] = Default.CurrentDir;
+            File.WriteAllText(FilePath, JsonConvert.SerializeObject(Ori_Default, Formatting.Indented));
         }
 
         public static void Delete()
