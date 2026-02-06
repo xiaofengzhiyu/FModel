@@ -123,7 +123,7 @@ public class Renderer : IDisposable
 
     public void Animate(UObject anim)
     {
-        if (!Options.ModelIsWaitingAnimation)
+        if (!Services.ApplicationService.ApplicationView.CUE4Parse.ModelIsWaitingAnimation)
         {
             if (anim is UAnimSequenceBase animBase)
             {
@@ -598,7 +598,7 @@ public class Renderer : IDisposable
             if (bSpline && model is SplineModel splineModel)
                 splineModel.AddComponent((USplineMeshComponent)staticMeshComp);
         }
-        else if (m.TryConvert(out var mesh))
+        else if (m.TryConvert(out var mesh, UserSettings.Default.NaniteMeshExportFormat))
         {
             model = bSpline ? new SplineModel(m, mesh, (USplineMeshComponent)staticMeshComp, transform) : new StaticModel(m, mesh, transform);
             model.IsTwoSided = actor.GetOrDefault("bMirrored", staticMeshComp.GetOrDefault("bDisallowMeshPaintPerInstance", model.IsTwoSided));

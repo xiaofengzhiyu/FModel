@@ -151,13 +151,13 @@ public class GameSelectorViewModel : ViewModel
         return null;
     }
 
-    private DirectorySettings GetSteamGame(int id, string pakDirectory, EGame ueVersion)
+    private DirectorySettings GetSteamGame(int id, string pakDirectory, EGame ueVersion, string aesKey = "")
     {
         var steamInfo = SteamDetection.GetSteamGameById(id);
         if (steamInfo is not null)
         {
             Log.Debug("Found {GameName} in steam manifests", steamInfo.Name);
-            return DirectorySettings.Default(steamInfo.Name, $"{steamInfo.GameRoot}{pakDirectory}", ue: ueVersion);
+            return DirectorySettings.Default(steamInfo.Name, $"{steamInfo.GameRoot}{pakDirectory}", ue: ueVersion, aes: aesKey);
         }
 
         return null;
