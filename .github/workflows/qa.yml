@@ -27,7 +27,7 @@ jobs:
 
       - name: 📦 Create ZIP archive
         run: |
-          Compress-Archive -Path ./publish/* -DestinationPath FModel-dev-${{ github.sha }}.zip
+          Compress-Archive -Path ./FModel/bin/Publish/FModel.exe -DestinationPath FModel-dev-${{ github.sha }}.zip
 
       - name: 📤 Upload as Workflow Artifact
         uses: actions/upload-artifact@v4
