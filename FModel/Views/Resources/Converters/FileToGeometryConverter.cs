@@ -79,10 +79,18 @@ public class FileToGeometryConverter : IMultiValueConverter
                 "function" => ("FunctionIcon", "NeutralBrush"),
                 "bin" => ("DataTableIcon", "BinaryBrush"),
                 "xml" => ("XmlIcon", "JsonXmlBrush"),
+                "gitignore" => ("GitIcon", "GitBrush"),
+                "html" => ("HtmlIcon", "HtmlBrush"),
+                "js" => ("JavaScriptIcon", "JavaScriptBrush"),
+                "css" => ("CssIcon", "CssBrush"),
+                "csv" => ("CsvIcon", "CsvBrush"),
                 _ => ("DataTableIcon", "NeutralBrush")
             },
 
             EAssetCategory.ByteCode => ("CodeIcon", "CodeBrush"),
+
+            EAssetCategory.Borderlands => ("BorderlandsIcon", "BorderlandsBrush"),
+            EAssetCategory.Aion2 => ("AionIcon", "AionBrush"),
 
             _ => ("AssetIcon", "NeutralBrush")
         };
