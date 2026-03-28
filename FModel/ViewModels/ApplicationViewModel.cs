@@ -141,8 +141,10 @@ public class ApplicationViewModel : ViewModel
         if (!bAlreadyLaunched && UserSettings.Default.PerDirectory.TryGetValue(gameDirectory, out var currentDir))
             return currentDir;
 
+        Status.SetStatus(EStatusKind.Configuring);
         var gameLauncherViewModel = new GameSelectorViewModel(gameDirectory);
         var result = new DirectorySelector(gameLauncherViewModel).ShowDialog();
+        Status.SetStatus(EStatusKind.Ready);
         if (!result.HasValue || !result.Value) return null;
 
         UserSettings.Default.GameDirectory = gameLauncherViewModel.SelectedDirectory.GameDirectory;
@@ -153,6 +155,35 @@ public class ApplicationViewModel : ViewModel
         UserSettings.Default.CurrentDir = gameLauncherViewModel.SelectedDirectory;
         RestartWithWarning();
         return null;
+    }
+
+    public DirectorySettings AddGameDirectory(string directory)
+    {
+        if (Status.Kind is EStatusKind.Configuring)
+        {
+            var directorySelector = Helper.GetWindow<DirectorySelector>("Directory Selector", null);
+            directorySelector.AddManualGame(directory);
+            return null;
+        }
+        else
+        {
+            Status.SetStatus(EStatusKind.Configuring);
+            var gameLauncherViewModel = new GameSelectorViewModel(UserSettings.Default.GameDirectory);
+            var directorySelector = new DirectorySelector(gameLauncherViewModel);
+            directorySelector.AddManualGame(directory);
+            var result = directorySelector.ShowDialog();
+            Status.SetStatus(EStatusKind.Ready);
+            if (!result.HasValue || !result.Value)
+                return null;
+
+            UserSettings.Default.GameDirectory = gameLauncherViewModel.SelectedDirectory.GameDirectory;
+            if (UserSettings.Default.CurrentDir.Equals(gameLauncherViewModel.SelectedDirectory))
+                return gameLauncherViewModel.SelectedDirectory;
+
+            UserSettings.Default.CurrentDir = gameLauncherViewModel.SelectedDirectory;
+            RestartWithWarning();
+            return null;
+        }
     }
 
     public void RestartWithWarning()
@@ -246,7 +277,7 @@ public class ApplicationViewModel : ViewModel
             }
             else
             {
-                FLogger.Append(ELog.Error, () => FLogger.Text("Could not download VgmStream", Constants.WHITE, true));
+                FLogger.Append(ELog.Error, () => FLogger.Text("Could not download vgmstream", Constants.WHITE, true));
             }
         }
     }
@@ -268,31 +299,15 @@ public class ApplicationViewModel : ViewModel
 
     public static async Task InitOodle()
     {
-        if (File.Exists(OodleHelper.OODLE_DLL_NAME_OLD))
-        {
-            try
-            {
-                File.Delete(OodleHelper.OODLE_DLL_NAME_OLD);
-            }
-            catch { /* ignored */}
-        }
-
-        var oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_DLL_NAME_OLD);
+        var oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_NAME_OLD);
         if (!File.Exists(oodlePath))
         {
-            oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_DLL_NAME);
-        }
-
-        if (!File.Exists(oodlePath))
-        {
-            if (!await OodleHelper.DownloadOodleDllAsync(oodlePath))
-            {
-                FLogger.Append(ELog.Error, () => FLogger.Text("Failed to download Oodle", Constants.WHITE, true));
-                return;
-            }
+            oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_NAME_CURRENT);
         }
 
         OodleHelper.Initialize(oodlePath);
+        if (OodleHelper.Instance is null)
+            FLogger.Append(ELog.Error, () => FLogger.Text("Failed to download Oodle", Constants.WHITE, true));
     }
 
     public static async Task InitZlib()

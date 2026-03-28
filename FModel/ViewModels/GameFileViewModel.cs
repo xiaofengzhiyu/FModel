@@ -7,6 +7,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 using CUE4Parse.FileProvider.Objects;
+using CUE4Parse.GameTypes.Borderlands3.Assets.Exports;
+using CUE4Parse.GameTypes.Borderlands4.Assets.Exports;
 using CUE4Parse.GameTypes.FN.Assets.Exports.DataAssets;
 using CUE4Parse.GameTypes.SMG.UE4.Assets.Exports.Wwise;
 using CUE4Parse.GameTypes.SMG.UE4.Assets.Objects;
@@ -20,6 +22,7 @@ using CUE4Parse.UE4.Assets.Exports.CustomizableObject;
 using CUE4Parse.UE4.Assets.Exports.Engine;
 using CUE4Parse.UE4.Assets.Exports.Engine.Font;
 using CUE4Parse.UE4.Assets.Exports.Fmod;
+using CUE4Parse.UE4.Assets.Exports.FMod;
 using CUE4Parse.UE4.Assets.Exports.Foliage;
 using CUE4Parse.UE4.Assets.Exports.Internationalization;
 using CUE4Parse.UE4.Assets.Exports.LevelSequence;
@@ -42,6 +45,7 @@ using CUE4Parse.UE4.Objects.PhysicsEngine;
 using CUE4Parse.UE4.Objects.RigVM;
 using CUE4Parse.UE4.Objects.UObject;
 using CUE4Parse.UE4.Objects.UObject.Editor;
+using CUE4Parse.UE4.Versions;
 using CUE4Parse.Utils;
 
 using CUE4Parse_Conversion.Textures;
@@ -63,6 +67,7 @@ public class GameFileViewModel(GameFile asset) : ViewModel
     private const int MaxPreviewSize = 128;
 
     private ApplicationViewModel _applicationView => ApplicationService.ApplicationView;
+    private EGame? GameVersion => _applicationView.CUE4Parse?.Provider.Versions.Game;
 
     public EResolveCompute Resolved { get; private set; } = EResolveCompute.None;
     public GameFile Asset { get; } = asset;
@@ -192,7 +197,7 @@ public class GameFileViewModel(GameFile asset) : ViewModel
             if (pointer?.Object is null)
                 return;
 
-            var dummy = ((AbstractUePackage) pkg).ConstructObject(pointer.Class?.Object?.Value as UStruct, pkg);
+            var dummy = ((AbstractUePackage) pkg).ConstructObject(pointer.Class, pkg);
             ResolvedAssetType = dummy.ExportType;
 
             (AssetCategory, AssetActions) = dummy switch
@@ -235,17 +240,28 @@ public class GameFileViewModel(GameFile asset) : ViewModel
                 UObjectRedirector => (EAssetCategory.ObjectRedirector, EBulkType.None),
                 UPhysicalMaterial => (EAssetCategory.PhysicalMaterial, EBulkType.None),
 
-                USoundAtomCue or UAkAudioEvent or USoundCue or UFMODEvent => (EAssetCategory.AudioEvent, EBulkType.Audio),
+                USoundAtomCue or UAkAudioEvent or USoundCue or UFMODEvent
+                    or UAkAssetData or UAkAssetPlatformData => (EAssetCategory.AudioEvent, EBulkType.Audio),
+
+                UFMODBankLookup => (EAssetCategory.Data, EBulkType.None),
+
+                UFMODBus or UFMODSnapshot or UFMODSnapshotReverb or UFMODVCA => (EAssetCategory.Audio, EBulkType.None),
 
                 UFMODBank or UAkAudioBank or UAtomWaveBank or UAkInitBank => (EAssetCategory.SoundBank, EBulkType.Audio),
 
                 UWwiseAssetLibrary or USoundBase or UAkMediaAssetData or UAtomCueSheet
-                    or USoundAtomCueSheet or UAkAudioType or UExternalSource or UExternalSourceBank => (EAssetCategory.Audio, EBulkType.Audio),
+                    or USoundAtomCueSheet or UAkAudioType or UExternalSource or UExternalSourceBank
+                    or UAkMediaAsset => (EAssetCategory.Audio, EBulkType.Audio),
 
                 UFileMediaSource => (EAssetCategory.Video, EBulkType.None),
                 UFont or UFontFace or USMGLocaleFontUMG => (EAssetCategory.Font, EBulkType.None),
 
                 UNiagaraSystem or UNiagaraScriptBase or UParticleSystem => (EAssetCategory.Particle, EBulkType.None),
+
+                // Game specific assets below
+                UBorderlandsDialogObject => (EAssetCategory.Borderlands, EBulkType.None), // Borderlands 3;
+                UGbxGraphAsset or UDialogScriptData or UDialogPerformanceData => (EAssetCategory.Borderlands, EBulkType.Audio), // Borderlands 4; Borderlands 3;
+                UFaceFXAnimSet when GameVersion is EGame.GAME_Borderlands4 => (EAssetCategory.Borderlands, EBulkType.Audio), // Borderlands 4;
 
                 _ => (EAssetCategory.All, EBulkType.None),
             };
@@ -312,7 +328,8 @@ public class GameFileViewModel(GameFile asset) : ViewModel
     private Task ResolveByExtensionAsync(EResolveCompute resolve)
     {
         Resolved |= EResolveCompute.Preview;
-        switch (Asset.Extension)
+        var lowercaseExtension = Asset.Extension.ToLowerInvariant();
+        switch (lowercaseExtension)
         {
             case "uproject":
             case "uefnproject":
@@ -331,8 +348,15 @@ public class GameFileViewModel(GameFile asset) : ViewModel
             case "log":
             case "pem":
             case "xml":
+            case "gitignore":
+            case "html":
+            case "css":
+            case "js":
+            case "data":
+            case "csv":
                 AssetCategory = EAssetCategory.Data;
                 break;
+            case "stinfo":
             case "ushaderbytecode":
                 AssetCategory = EAssetCategory.ByteCode;
                 break;
@@ -379,7 +403,7 @@ public class GameFileViewModel(GameFile asset) : ViewModel
                     stream.Position = 0;
 
                     SKBitmap bitmap;
-                    if (Asset.Extension == "svg")
+                    if (lowercaseExtension == "svg")
                     {
                         var svg = new SKSvg();
                         svg.Load(stream);
@@ -401,12 +425,20 @@ public class GameFileViewModel(GameFile asset) : ViewModel
                         bitmap = SKBitmap.Decode(stream);
                     }
 
-                    using var image = bitmap.Encode(Asset.Extension == "jpg" ? SKEncodedImageFormat.Jpeg : SKEncodedImageFormat.Png, 100);
+                    using var image = bitmap.Encode(lowercaseExtension == "jpg" ? SKEncodedImageFormat.Jpeg : SKEncodedImageFormat.Png, 100);
                     SetPreviewImage(image);
 
                     bitmap.Dispose();
                 });
             }
+            // Game specific extensions below
+            case "ace" when GameVersion is EGame.GAME_Borderlands3:
+            case "ncs" when GameVersion is EGame.GAME_Borderlands4:
+                AssetCategory = EAssetCategory.Borderlands;
+                break;
+            case "dat" when GameVersion is EGame.GAME_Aion2:
+                AssetCategory = EAssetCategory.Aion2;
+                break;
             default:
                 AssetCategory = EAssetCategory.All; // just so it sets resolved
                 break;
