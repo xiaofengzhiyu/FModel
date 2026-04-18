@@ -87,7 +87,7 @@ public partial class MainWindow
     {
         var newOrUpdated = UserSettings.Default.ShowChangelog;
 #if !DEBUG
-        ApplicationService.ApiEndpointView.FModelApi.CheckForUpdates(true);
+        ApplicationService.ApiEndpointView.FModelApi.CheckForUpdates(false);
 #endif
 
         switch (UserSettings.Default.AesReload)
