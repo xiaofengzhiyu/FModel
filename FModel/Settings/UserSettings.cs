@@ -42,13 +42,36 @@ namespace FModel.Settings
         public static void Save()
         {
             if (!_bSave || Default == null) return;
-            // 在保存的时候,需要修改AppSettings,先读取最新的,然后再插入自身的信息即可
-            // 始终保持读取的是最新的配置文件
-           
-            var Ori_Default = JsonConvert.DeserializeObject<UserSettings>(
-                File.ReadAllText(FilePath), JsonNetSerializer.SerializerSettings);
-            Ori_Default.PerDirectory[Default.CurrentDir.GameDirectory] = Default.CurrentDir;
-            File.WriteAllText(FilePath, JsonConvert.SerializeObject(Ori_Default, Formatting.Indented));
+
+            // 以内存中的 Default 为主体进行保存
+            // 从磁盘读取其他实例可能新增的 PerDirectory 条目，合入内存，避免丢失
+            if (File.Exists(FilePath))
+            {
+                try
+                {
+                    var diskSettings = JsonConvert.DeserializeObject<UserSettings>(
+                        File.ReadAllText(FilePath), JsonNetSerializer.SerializerSettings);
+                    if (diskSettings?.PerDirectory != null)
+                    {
+                        foreach (var kvp in diskSettings.PerDirectory)
+                        {
+                            // 只补充内存中不存在的条目（其他实例新增的）
+                            if (!Default.PerDirectory.ContainsKey(kvp.Key))
+                                Default.PerDirectory[kvp.Key] = kvp.Value;
+                        }
+                    }
+                }
+                catch
+                {
+                    // 文件损坏或为空时忽略，不影响保存
+                }
+            }
+
+            // 确保当前实例的 CurrentDir 写入 PerDirectory
+            Default.PerDirectory[Default.CurrentDir.GameDirectory] = Default.CurrentDir;
+
+            // 序列化完整的内存状态写回磁盘
+            File.WriteAllText(FilePath, JsonConvert.SerializeObject(Default, Formatting.Indented));
         }
 
         public static void Delete()
