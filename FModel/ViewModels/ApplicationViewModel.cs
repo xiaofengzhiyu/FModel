@@ -254,7 +254,7 @@ public class ApplicationViewModel : ViewModel
 
     public static async Task InitVgmStream()
     {
-        var vgmZipFilePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", "vgmstream-win.zip");
+        var vgmZipFilePath = Path.Combine(AppContext.BaseDirectory, ".data", "vgmstream-win.zip");
         var vgmFileInfo = new FileInfo(vgmZipFilePath);
 
         if (!vgmFileInfo.Exists || vgmFileInfo.LastWriteTimeUtc < DateTime.UtcNow.AddMonths(-4))
@@ -286,7 +286,7 @@ public class ApplicationViewModel : ViewModel
     public static async Task InitImGuiSettings(bool forceDownload)
     {
         const string imgui = "imgui.ini";
-        var imguiPath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", imgui);
+        var imguiPath = Path.Combine(AppContext.BaseDirectory, ".data", imgui);
 
         // 判断imgui
         if (new FileInfo(imguiPath).Length > 0)
@@ -306,10 +306,10 @@ public class ApplicationViewModel : ViewModel
 
     public static async Task InitOodle()
     {
-        var oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_NAME_OLD);
+        var oodlePath = Path.Combine(AppContext.BaseDirectory, ".data", OodleHelper.OODLE_NAME_OLD);
         if (!File.Exists(oodlePath))
         {
-            oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_NAME_CURRENT);
+            oodlePath = Path.Combine(AppContext.BaseDirectory, ".data", OodleHelper.OODLE_NAME_CURRENT);
         }
 
         OodleHelper.Initialize(oodlePath);
@@ -319,7 +319,7 @@ public class ApplicationViewModel : ViewModel
 
     public static async Task InitZlib()
     {
-        var zlibPath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", ZlibHelper.DLL_NAME);
+        var zlibPath = Path.Combine(AppContext.BaseDirectory, ".data", ZlibHelper.DLL_NAME);
         var zlibFileInfo = new FileInfo(zlibPath);
 
         if (!zlibFileInfo.Exists || zlibFileInfo.LastWriteTimeUtc < DateTime.UtcNow.AddMonths(-4))
@@ -336,7 +336,7 @@ public class ApplicationViewModel : ViewModel
 
     public static async Task InitDetex()
     {
-        var detexPath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", DetexHelper.DLL_NAME);
+        var detexPath = Path.Combine(AppContext.BaseDirectory, ".data", DetexHelper.DLL_NAME);
         if (File.Exists(DetexHelper.DLL_NAME))
         {
             File.Move(DetexHelper.DLL_NAME, detexPath, true);

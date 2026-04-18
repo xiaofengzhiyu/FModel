@@ -231,7 +231,7 @@ public class CUE4ParseViewModel : ViewModel
             Provider.OnDemandOptions = new IoStoreOnDemandOptions
             {
                 ChunkHostUri = new Uri("https://download.epicgames.com/", UriKind.Absolute),
-                ChunkCacheDirectory = Directory.CreateDirectory(Path.Combine(UserSettings.Default.OutputDirectory, ".data")),
+                ChunkCacheDirectory = Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, ".data")),
                 Authorization = new AuthenticationHeaderValue("Bearer", UserSettings.Default.LastAuthResponse.AccessToken),
                 Timeout = TimeSpan.FromSeconds(30)
             };
@@ -249,7 +249,7 @@ public class CUE4ParseViewModel : ViewModel
                                 throw new FileLoadException("Could not load latest Fortnite manifest, you may have to switch to your local installation.");
                             }
 
-                            var cacheDir = Directory.CreateDirectory(Path.Combine(UserSettings.Default.OutputDirectory, ".data")).FullName;
+                            var cacheDir = Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, ".data")).FullName;
                             var manifestOptions = new ManifestParseOptions
                             {
                                 ChunkCacheDirectory = cacheDir,
@@ -418,7 +418,7 @@ public class CUE4ParseViewModel : ViewModel
                     endpoint.Path = "$.mappings.ZStandard";
                 }
 
-                var mappingsFolder = Path.Combine(UserSettings.Default.OutputDirectory, ".data");
+                var mappingsFolder = Path.Combine(AppContext.BaseDirectory, ".data");
                 var mappings = _apiEndpointView.DynamicApi.GetMappings(CancellationToken.None, endpoint.Url, endpoint.Path);
                 if (mappings is { Length: > 0 })
                 {

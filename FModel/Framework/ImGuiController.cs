@@ -63,7 +63,7 @@ public class ImGuiController : IDisposable
         var io = ImGui.GetIO();
         unsafe
         {
-            var iniFileNamePtr = Marshal.StringToCoTaskMemUTF8(Path.Combine(UserSettings.Default.OutputDirectory, ".data", "imgui.ini"));
+            var iniFileNamePtr = Marshal.StringToCoTaskMemUTF8(Path.Combine(AppContext.BaseDirectory, ".data", "imgui.ini"));
             io.NativePtr->IniFilename = (byte*)iniFileNamePtr;
         }
         

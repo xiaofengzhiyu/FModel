@@ -111,7 +111,7 @@ public partial class SettingsView
         var openFileDialog = new OpenFileDialog
         {
             Title = "Select a mapping file",
-            InitialDirectory = Path.Combine(UserSettings.Default.OutputDirectory, ".data"),
+            InitialDirectory = Path.Combine(AppContext.BaseDirectory, ".data"),
             Filter = "USMAP Files (*.usmap)|*.usmap|All Files (*.*)|*.*"
         };
 
