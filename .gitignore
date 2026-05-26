@@ -353,3 +353,7 @@ MigrationBackup/
 # Add Local Stone ignore
 FModelQA.code-workspace
 LocalMD/
+ref/
+
+# LLM
+OPENCODE.md

@@ -1,8 +1,28 @@
 name: FModel QA STONE Builder
 
 on:
-  push:
-    branches: [ stone ]
+  workflow_dispatch:
+    inputs:
+        buildConfig:
+          description: '构建配置'
+          required: true
+          default: 'Release'
+          type: choice
+          options:
+            - Release
+            - Debug
+        runtimeIdentifier:
+          description: '运行时标识'
+          required: true
+          default: 'win-x64'
+          type: choice
+          options:
+            - win-x64
+        publishSingleFile:
+          description: '是否发布为单文件'
+          required: true
+          default: true
+          type: boolean
 
 jobs:
   build:
@@ -23,7 +43,7 @@ jobs:
         run: dotnet restore FModel
 
       - name: .NET Publish
-        run: dotnet publish "./FModel/FModel.csproj" -c Release --no-restore --no-self-contained -r win-x64 -f net8.0-windows -o "./FModel/bin/Publish/" -p:PublishReadyToRun=false -p:PublishSingleFile=true -p:DebugType=None -p:GenerateDocumentationFile=false -p:DebugSymbols=false
+        run: dotnet publish "./FModel/FModel.csproj" -c ${{ github.event.inputs.buildConfig }} --no-restore --no-self-contained -r ${{ github.event.inputs.runtimeIdentifier }} -f net8.0-windows -o "./FModel/bin/Publish/" -p:PublishReadyToRun=false -p:PublishSingleFile=${{ github.event.inputs.publishSingleFile }} -p:DebugType=None -p:GenerateDocumentationFile=false -p:DebugSymbols=false
 
       - name: ZIP File
         uses: thedoctor0/zip-release@0.7.6
