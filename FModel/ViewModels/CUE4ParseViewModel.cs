@@ -5,14 +5,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-
 using AdonisUI.Controls;
-
 using CUE4Parse;
 using CUE4Parse.Compression;
 using CUE4Parse.Encryption.Aes;
@@ -22,11 +20,16 @@ using CUE4Parse.FileProvider.Vfs;
 using CUE4Parse.GameTypes.Aion2.Objects;
 using CUE4Parse.GameTypes.AoC.Objects;
 using CUE4Parse.GameTypes.AshEchoes.FileProvider;
-using CUE4Parse.GameTypes.SMG.UE4.Assets.Exports.Wwise;
-using CUE4Parse.GameTypes.KRD.Assets.Exports;
+using CUE4Parse.GameTypes.Borderlands3.Assets.Exports;
 using CUE4Parse.GameTypes.Borderlands4.Assets.Exports;
 using CUE4Parse.GameTypes.Borderlands4.Wwise;
-using CUE4Parse.GameTypes.Borderlands3.Assets.Exports;
+using CUE4Parse.GameTypes.DFHO.Assets.Objects;
+using CUE4Parse.GameTypes.HonorOfKings.FileProvider;
+using CUE4Parse.GameTypes.KRD.Assets.Exports;
+using CUE4Parse.GameTypes.LegoBatman.Assets;
+using CUE4Parse.GameTypes.RocoKingdomWorld.Assets.Objects;
+using CUE4Parse.GameTypes.SMG.UE4.Assets.Exports.Wwise;
+using CUE4Parse.GameTypes.SquareEnix.UE4.Assets.Exports;
 using CUE4Parse.MappingsProvider;
 using CUE4Parse.UE4.AssetRegistry;
 using CUE4Parse.UE4.Assets;
@@ -41,12 +44,14 @@ using CUE4Parse.UE4.Assets.Exports.StaticMesh;
 using CUE4Parse.UE4.Assets.Exports.Texture;
 using CUE4Parse.UE4.Assets.Exports.Verse;
 using CUE4Parse.UE4.Assets.Exports.Wwise;
+using CUE4Parse.UE4.Assets.Objects;
 using CUE4Parse.UE4.BinaryConfig;
 using CUE4Parse.UE4.CriWare;
 using CUE4Parse.UE4.CriWare.Readers;
 using CUE4Parse.UE4.FMod;
 using CUE4Parse.UE4.IO;
 using CUE4Parse.UE4.Localization;
+using CUE4Parse.UE4.Lua.unluac;
 using CUE4Parse.UE4.Objects.Core.Serialization;
 using CUE4Parse.UE4.Objects.Engine;
 using CUE4Parse.UE4.Objects.UObject;
@@ -57,14 +62,11 @@ using CUE4Parse.UE4.Shaders;
 using CUE4Parse.UE4.Versions;
 using CUE4Parse.UE4.Wwise;
 using CUE4Parse.Utils;
-
 using CUE4Parse_Conversion;
 using CUE4Parse_Conversion.Sounds;
-
 using EpicManifestParser;
 using EpicManifestParser.UE;
 using EpicManifestParser.ZlibngDotNetDecompressor;
-
 using FModel.Creator;
 using FModel.Extensions;
 using FModel.Framework;
@@ -73,21 +75,14 @@ using FModel.Settings;
 using FModel.Views;
 using FModel.Views.Resources.Controls;
 using FModel.Views.Snooper;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-
 using Serilog;
-
 using SkiaSharp;
-
 using Svg.Skia;
-
 using UE4Config.Parsing;
-
 using Application = System.Windows.Application;
 using FGuid = CUE4Parse.UE4.Objects.Core.Misc.FGuid;
 
@@ -204,6 +199,7 @@ public class CUE4ParseViewModel : ViewModel
                     ], SearchOption.AllDirectories, versionContainer, pathComparer),
                     _ when versionContainer.Game is EGame.GAME_AshEchoes => new AEDefaultFileProvider(gameDirectory, SearchOption.AllDirectories, versionContainer, pathComparer),
                     _ when versionContainer.Game is EGame.GAME_BlackStigma => new DefaultFileProvider(gameDirectory, SearchOption.AllDirectories, versionContainer, StringComparer.Ordinal),
+                    _ when versionContainer.Game is EGame.GAME_HonorofKingsWorld => new HoKWDefaultFileProvider(gameDirectory, SearchOption.AllDirectories, versionContainer, pathComparer),
                     _ => new DefaultFileProvider(gameDirectory, SearchOption.AllDirectories, versionContainer, pathComparer)
                 };
 
@@ -225,14 +221,12 @@ public class CUE4ParseViewModel : ViewModel
 
     public async Task Initialize()
     {
-        await _apiEndpointView.EpicApi.VerifyAuth(CancellationToken.None);
         await _threadWorkerView.Begin(cancellationToken =>
         {
             Provider.OnDemandOptions = new IoStoreOnDemandOptions
             {
                 ChunkHostUri = new Uri("https://download.epicgames.com/", UriKind.Absolute),
                 ChunkCacheDirectory = Directory.CreateDirectory(Path.Combine(UserSettings.Default.OutputDirectory, ".data")),
-                Authorization = new AuthenticationHeaderValue("Bearer", UserSettings.Default.LastAuthResponse.AccessToken),
                 Timeout = TimeSpan.FromSeconds(30)
             };
 
@@ -267,7 +261,7 @@ public class CUE4ParseViewModel : ViewModel
                             {
                                 (manifest, _) = manifestInfo.DownloadAndParseAsync(manifestOptions,
                                     cancellationToken: cancellationToken,
-                                    elementManifestPredicate: static x => x.Uri.Host == "download.epicgames.com"
+                                    elementManifestPredicate: static x => x.Uri.Host == "download.epicgames.com" || x.Uri.Host == "epicgames-download1.akamaized.net"
                                 ).GetAwaiter().GetResult();
                             }
                             catch (HttpRequestException ex)
@@ -285,6 +279,20 @@ public class CUE4ParseViewModel : ViewModel
                             {
                                 p.RegisterVfs(fileManifest.FileName, [fileManifest.GetStream()],
                                     it => new FRandomAccessStreamArchive(it, manifest.FindFile(it)!.GetStream(), p.Versions));
+                            });
+
+                            var manifests = _apiEndpointView.DillyApi.GetManifests(cancellationToken);
+                            var downloadUrl = manifests.First(x => x.AppName == "Fortnite_Studio").DownloadUrl;
+
+                            using var client = new HttpClient();
+                            var manifestBytes = client.GetByteArrayAsync(downloadUrl).GetAwaiter().GetResult();
+
+                            var uefnManifest = FBuildPatchAppManifest.Deserialize(manifestBytes, manifestOptions);
+
+                            Parallel.ForEach(uefnManifest.Files.Where(x => _fnLiveRegex.IsMatch(x.FileName)), fileManifest =>
+                            {
+                                p.RegisterVfs(fileManifest.FileName, [fileManifest.GetStream()],
+                                    it => new FRandomAccessStreamArchive(it, uefnManifest.FindFile(it)!.GetStream(), p.Versions));
                             });
 
                             var elapsedTime = Stopwatch.GetElapsedTime(startTs);
@@ -393,6 +401,16 @@ public class CUE4ParseViewModel : ViewModel
         });
     }
 
+    private ITypeMappingsProvider SelectMappingsProvider(string path)
+    {
+        if (path.EndsWith(".jmap.gz", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".jmap", StringComparison.OrdinalIgnoreCase))
+        {
+            return new JmapTypeMappingsProvider(path);
+        }
+
+        return new FileUsmapTypeMappingsProvider(path);
+    }
+
     public Task InitMappings(bool force = false)
     {
         if (!UserSettings.IsEndpointValid(EEndpointType.Mapping, out var endpoint))
@@ -406,7 +424,7 @@ public class CUE4ParseViewModel : ViewModel
             var l = ELog.Information;
             if (endpoint.Overwrite && File.Exists(endpoint.FilePath))
             {
-                Provider.MappingsContainer = new FileUsmapTypeMappingsProvider(endpoint.FilePath);
+                Provider.MappingsContainer = SelectMappingsProvider(endpoint.FilePath);
             }
             else if (endpoint.IsValid)
             {
@@ -432,7 +450,7 @@ public class CUE4ParseViewModel : ViewModel
                             _apiEndpointView.DownloadFile(mapping.Url, mappingPath);
                         }
 
-                        Provider.MappingsContainer = new FileUsmapTypeMappingsProvider(mappingPath);
+                        Provider.MappingsContainer = SelectMappingsProvider(mappingPath);
                         break;
                     }
                 }
@@ -622,6 +640,9 @@ public class CUE4ParseViewModel : ViewModel
     public void AudioFolder(CancellationToken cancellationToken, TreeItem folder)
         => BulkFolder(cancellationToken, folder, asset => Extract(cancellationToken, asset, TabControl.HasNoTabs, EBulkType.Audio | EBulkType.Auto));
 
+    public void CodeFolder(CancellationToken cancellationToken, TreeItem folder)
+        => BulkFolder(cancellationToken, folder, asset => Extract(cancellationToken, asset, TabControl.HasNoTabs, EBulkType.Code | EBulkType.Auto));
+
     public void Extract(CancellationToken cancellationToken, GameFile entry, bool addNewTab = false, EBulkType bulk = EBulkType.None)
     {
         ApplicationService.ApplicationView.IsAssetsExplorerVisible = false;
@@ -635,6 +656,7 @@ public class CUE4ParseViewModel : ViewModel
         var saveProperties = HasFlag(bulk, EBulkType.Properties);
         var saveTextures = HasFlag(bulk, EBulkType.Textures);
         var saveAudio = HasFlag(bulk, EBulkType.Audio);
+        var saveDecompiled = HasFlag(bulk, EBulkType.Code);
         switch (entry.Extension)
         {
             case "uasset":
@@ -647,6 +669,13 @@ public class CUE4ParseViewModel : ViewModel
                 {
                     TabControl.SelectedTab.SetDocumentText(JsonConvert.SerializeObject(result.GetDisplayData(saveProperties), Formatting.Indented), saveProperties, updateUi);
                     if (saveProperties) break; // do not search for viewable exports if we are dealing with jsons
+                }
+
+                if (saveDecompiled)
+                {
+                    if (Decompile(entry, false))
+                        TabControl.SelectedTab.SaveDecompiled(updateUi);
+                    break;
                 }
 
                 for (var i = result.InclusiveStart; i < result.ExclusiveEnd; i++)
@@ -672,9 +701,26 @@ public class CUE4ParseViewModel : ViewModel
                 ProcessAion2DatFile(entry, updateUi, saveProperties);
                 break;
             }
+            case "bytes" when Provider.Versions.Game is EGame.GAME_RocoKingdomWorld:
+            {
+                ProcessRocoBinFile(entry, updateUi, saveProperties);
+                break;
+            }
             case "dbc" when Provider.Versions.Game is EGame.GAME_AshesOfCreation:
             {
                 ProcessCacheDBFile(entry, updateUi, saveProperties);
+                break;
+            }
+            case "luac":
+            case "lua":
+            {
+                var data = Provider.SaveAsset(entry);
+                byte[] decompiled = ProcessLuaFile(data);
+
+                using var stream = new MemoryStream(decompiled);
+                using var reader = new StreamReader(stream);
+                TabControl.SelectedTab.SetDocumentText(reader.ReadToEnd(), saveProperties, updateUi);
+
                 break;
             }
             case "upluginmanifest":
@@ -687,6 +733,7 @@ public class CUE4ParseViewModel : ViewModel
             case "archive":
             case "dnearchive": // Banishers: Ghosts of New Eden
             case "gitignore":
+            case "gitattributes":
             case "LICENSE":
             case "playstats": // Dispatch
             case "template":
@@ -699,13 +746,13 @@ public class CUE4ParseViewModel : ViewModel
             case "verse":
             case "html":
             case "json5":
-            case "json":
             case "uref":
             case "cube":
             case "usda":
             case "ocio":
             case "data" when Provider.ProjectName is "OakGame":
             case "scss":
+            case "yaml":
             case "ini":
             case "txt":
             case "log":
@@ -728,11 +775,11 @@ public class CUE4ParseViewModel : ViewModel
             case "apx":
             case "udn":
             case "doc":
-            case "lua":
             case "vdf":
             case "yml":
             case "js":
             case "po":
+            case "py":
             case "md":
             case "h":
             case "non" when Provider.Versions.Game is EGame.GAME_RocoKingdomWorld:
@@ -745,12 +792,26 @@ public class CUE4ParseViewModel : ViewModel
             case "bl":
             case "bm":
             case "br":
+            case "sql":
+            case "cs":
             {
                 var data = Provider.SaveAsset(entry);
                 using var stream = new MemoryStream(data) { Position = 0 };
                 using var reader = new StreamReader(stream);
 
                 TabControl.SelectedTab.SetDocumentText(reader.ReadToEnd(), saveProperties, updateUi);
+
+                break;
+            }
+            case "ebd" when Provider.Versions.Game is EGame.GAME_ArcRaiders:
+            case "json":
+            {
+                var data = Provider.SaveAsset(entry);
+                using var stream = new MemoryStream(data) { Position = 0 };
+                using var reader = new StreamReader(stream);
+
+                var parsedJson = JsonConvert.DeserializeObject(reader.ReadToEnd());
+                TabControl.SelectedTab.SetDocumentText(JsonConvert.SerializeObject(parsedJson, Formatting.Indented), saveProperties, updateUi);
 
                 break;
             }
@@ -810,7 +871,7 @@ public class CUE4ParseViewModel : ViewModel
             case "pck":
             {
                 var archive = entry.CreateReader();
-                var wwise = new WwiseReader(archive, new WwiseGameFileSource(entry));
+                var wwise = new WwiseReader(new FWwiseArchive(archive), new WwiseGameFileSource(entry));
                 TabControl.SelectedTab.SetDocumentText(JsonConvert.SerializeObject(wwise, Formatting.Indented), saveProperties, updateUi);
 
                 var medias = WwiseProvider.ExtractBankSounds(wwise);
@@ -873,6 +934,13 @@ public class CUE4ParseViewModel : ViewModel
                 var header = new FOodleDictionaryArchive(archive).Header;
                 TabControl.SelectedTab.SetDocumentText(JsonConvert.SerializeObject(header, Formatting.Indented), saveProperties, updateUi);
 
+                break;
+            }
+            case "ustbin" when Provider.Versions.Game is EGame.GAME_DeltaForce:
+            {
+                var archive = entry.CreateReader();
+                var ustbin = new FDeltaStringTable(archive);
+                TabControl.SelectedTab.SetDocumentText(JsonConvert.SerializeObject(ustbin, Formatting.Indented), saveProperties, updateUi);
                 break;
             }
             case "png":
@@ -942,7 +1010,6 @@ public class CUE4ParseViewModel : ViewModel
                 break;
             }
             case "res": // just skip
-            case "luac": // compiled lua
             case "bytes": // wuthering waves
                 break;
             default:
@@ -955,6 +1022,40 @@ public class CUE4ParseViewModel : ViewModel
                         FLogger.Text($"There are some packages with an unknown type {entry.Extension}. Check Log file for a full list.", Constants.WHITE, true));
                 }
                 break;
+            }
+        }
+
+        // Roco Kingdom: World
+        void ProcessRocoBinFile(GameFile entry, bool updateUi, bool saveProperties)
+        {
+            TabControl.SelectedTab.Highlighter = AvalonExtensions.HighlighterSelector("json");
+            var nonFileName = "/" + entry.NameWithoutExtension + ".non";
+            var nonPath = Provider.Files.Keys.FirstOrDefault(k => k.EndsWith(nonFileName, StringComparison.OrdinalIgnoreCase));
+
+            // I will only get one localization file because they did not translate any languages, lol
+            var locPathKey = entry.Path.Replace("/BinData/", "/BinLocalize/zh_Hans/").Replace("/BinDataCompressed/", "/BinLocalize/zh_Hans/");
+            var locFileFound = Provider.Files.TryGetValue(locPathKey, out var locEntry);
+
+            if (!string.IsNullOrEmpty(nonPath) && Provider.Files.TryGetValue(nonPath, out var nonEntry))
+            {
+                string json = Encoding.UTF8.GetString(nonEntry.Read());
+                var schema = JsonConvert.DeserializeObject<FRocoSchema>(json);
+                var archive = entry.CreateReader();
+                var locArchive = locFileFound ? new FRocoBinData(locEntry.CreateReader(), null, ERocoBinDataType.BinLocalize) : null;
+
+                var data = entry.PathWithoutExtension switch
+                {
+                    var p when p.Contains("BinDataCompressed") => new FRocoBinData(archive, schema, ERocoBinDataType.BinDataCompressed, locArchive),
+                    var p when p.Contains("BinData") => new FRocoBinData(archive, schema, ERocoBinDataType.BinData, locArchive),
+                    var p when p.Contains("BinLocalize") => new FRocoBinData(archive, null, ERocoBinDataType.BinLocalize),
+                    _ => null
+                };
+
+                TabControl.SelectedTab.SetDocumentText(JsonConvert.SerializeObject(data, Formatting.Indented), saveProperties, updateUi);
+            }
+            else if (entry.PathWithoutExtension.Contains("/Bin/"))
+            {
+                throw new Exception($"Could not find associated .non file for {entry.Name}");
             }
         }
 
@@ -1012,6 +1113,53 @@ public class CUE4ParseViewModel : ViewModel
 
             TabControl.SelectedTab.SetDocumentText(JsonConvert.SerializeObject(dbc, Formatting.Indented), saveProperties, updateUi);
         }
+    }
+
+    private byte[] ProcessLuaFile(byte[] data)
+    {
+        var result = EUnluacErrorCode.Ok;
+        byte[] output = [];
+        if (BitConverter.ToUInt32(data) == UnluacHelper.LuaMagic && UnluacHelper.Instance is not null)
+        {
+            // opcodemap patch
+            byte[] opmapData = Provider.Versions.Game switch
+            {
+                _ => [],
+            };
+
+            var flags = UserSettings.Default.UnluacFlags;
+            var opcodemap = UserSettings.Default.CurrentDir.UnluacOpCodeMap;
+            if (!string.IsNullOrWhiteSpace(opcodemap))
+            {
+                opmapData = Encoding.UTF8.GetBytes(opcodemap);
+                flags |= EUnluacFlags.OpCodeMap;
+            }
+            else if (opmapData is { Length: > 12 })
+            {
+                flags |= EUnluacFlags.OpCodeMapPatch;
+            }
+
+            result = UnluacHelper.Decompile(data, opmapData, (uint)flags, out output, out var log);
+            if (result != EUnluacErrorCode.Ok && log.Length > 0)
+            {
+                Log.Error(Encoding.UTF8.GetString(log));
+            }
+        }
+        else
+        {
+            result = EUnluacErrorCode.Error;
+        }
+
+        var decompiled = result switch
+        {
+            EUnluacErrorCode.Ok => output,
+#if DEBUG
+            EUnluacErrorCode.PartialDecompile => output,
+#endif
+            _ => data,
+        };
+
+        return decompiled;
     }
 
     public void ExtractAndScroll(CancellationToken cancellationToken, string fullPath, string objectName, string parentExportType)
@@ -1148,20 +1296,20 @@ public class CUE4ParseViewModel : ViewModel
             case UFMODEvent when (isNone || saveAudio) && pointer.Object.Value is UFMODEvent fmodEvent:
             {
                 var extractedSounds = FmodProvider.ExtractEventSounds(fmodEvent);
-                var directory = Path.GetDirectoryName(fmodEvent.Owner?.Name) ?? "/FMOD/Desktop/";
+                var directory = Path.GetDirectoryName(Provider.FixPath(fmodEvent.Owner?.Name ?? "/FMOD/Desktop/"));
                 foreach (var sound in extractedSounds)
                 {
-                    SaveAndPlaySound(cancellationToken, Path.Combine(directory, sound.Name), sound.Extension, sound.Data, saveAudio, updateUi);
+                    SaveAndPlaySound(cancellationToken, Path.Combine(directory, sound.Name).Replace("\\", "/"), sound.Extension, sound.Data, saveAudio, updateUi);
                 }
                 return false;
             }
             case UFMODBank when (isNone || saveAudio) && pointer.Object.Value is UFMODBank fmodBank:
             {
                 var extractedSounds = FmodProvider.ExtractBankSounds(fmodBank);
-                var directory = Path.GetDirectoryName(fmodBank.Owner?.Name) ?? "/FMOD/Desktop/";
+                var directory = Path.GetDirectoryName(Provider.FixPath(fmodBank.Owner?.Name ?? "/FMOD/Desktop/"));
                 foreach (var sound in extractedSounds)
                 {
-                    SaveAndPlaySound(cancellationToken, Path.Combine(directory, sound.Name), sound.Extension, sound.Data, saveAudio, updateUi);
+                    SaveAndPlaySound(cancellationToken, Path.Combine(directory, sound.Name).Replace("\\", "/"), sound.Extension, sound.Data, saveAudio, updateUi);
                 }
                 return false;
             }
@@ -1176,11 +1324,26 @@ public class CUE4ParseViewModel : ViewModel
                     _ => []
                 };
 
-                var directory = Path.GetDirectoryName(atomObject.Owner?.Name) ?? "/Criware/";
-                directory = Path.GetDirectoryName(atomObject.Owner.Provider.FixPath(directory));
+                var directory = Path.GetDirectoryName(Provider.FixPath(atomObject.Owner?.Name ?? "/Criware/"));
                 foreach (var sound in extractedSounds)
                 {
                     SaveAndPlaySound(cancellationToken, Path.Combine(directory, sound.Name).Replace("\\", "/"), sound.Extension, sound.Data, saveAudio, updateUi);
+                }
+                return false;
+            }
+            case USQEXSEADSoundBank or USQEXSEADSound when (isNone || saveAudio) && pointer.Object.Value is UObject squareEnixObject:
+            {
+                var data = squareEnixObject switch
+                {
+                    USQEXSEADSoundBank sqexSoundBank => sqexSoundBank.SQEXSoundBankData?.ReadDataOnce() ?? [],
+                    USQEXSEADSound sqexSound => sqexSound.SQEXSoundData?.ReadDataOnce() ?? [],
+                    _ => [],
+                };
+                var sabPath = Path.Combine(TabControl.SelectedTab.Entry.PathWithoutExtension.Replace('\\', '/').SubstringBeforeLast('/'), squareEnixObject.Name);
+                var extractedSounds = AudioPlayerViewModel.ExtractSquareEnixAudio(sabPath, data);
+                foreach (var soundPath in extractedSounds)
+                {
+                    SaveAndPlaySound(cancellationToken, soundPath, "wav", File.ReadAllBytes(soundPath), saveAudio, updateUi);
                 }
                 return false;
             }
@@ -1221,7 +1384,7 @@ public class CUE4ParseViewModel : ViewModel
                 var shouldDecompress = UserSettings.Default.CompressedAudioMode is ECompressedAudio.PlayDecompressed;
                 foreach (var mediaIndex in akAudioEventData.MediaList)
                 {
-                    if (mediaIndex.ResolvedObject?.Object?.Value is UAkMediaAsset akMediaAsset)
+                    if (mediaIndex?.Object?.Value is UAkMediaAsset akMediaAsset)
                     {
                         if (akMediaAsset.CurrentMediaAssetData?.ResolvedObject?.Object?.Value is UAkMediaAssetData akMediaAssetData)
                         {
@@ -1276,6 +1439,27 @@ public class CUE4ParseViewModel : ViewModel
                     }
                 }
 
+                return false;
+            }
+            // LEGO® Batman™: Legacy of the Dark Knight
+            case UWubAudioEvent when (isNone || saveAudio) && pointer.Object.Value is UWubAudioEvent wubAudioEvent:
+            {
+                var extractedSounds = WwiseProvider.ExtractWubAudioEventSounds(wubAudioEvent);
+                foreach (var sound in extractedSounds)
+                {
+                    SaveAndPlaySound(cancellationToken, sound.OutputPath, sound.Extension, sound.Data?.GetData() ?? [], saveAudio, updateUi);
+                }
+                return false;
+            }
+            case UWubDialogueEvent when (isNone || saveAudio) && pointer.Object.Value is UWubDialogueEvent wubDialogueEvent:
+            {
+                var files = wubDialogueEvent.Wems
+                    .SelectMany(wem => Provider.Files.Values.Where(file => file.Path.EndsWith(wem.Text + ".wem", StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+                foreach (var entry in files)
+                {
+                    SaveAndPlaySound(cancellationToken, entry.PathWithoutExtension, entry.Extension, entry.Read(), saveAudio, updateUi);
+                }
                 return false;
             }
             case UWorld when isNone && UserSettings.Default.PreviewWorlds:
@@ -1365,11 +1549,13 @@ public class CUE4ParseViewModel : ViewModel
     }
 
 
-    public void Decompile(GameFile entry)
+    public bool Decompile(GameFile entry, bool AddTab = true)
     {
-        ApplicationService.ApplicationView.IsAssetsExplorerVisible = false;
-
-        if (TabControl.CanAddTabs) TabControl.AddTab(entry);
+        if (TabControl.CanAddTabs && AddTab)
+        {
+            ApplicationService.ApplicationView.IsAssetsExplorerVisible = false;
+            TabControl.AddTab(entry);
+        }
         else TabControl.SelectedTab.SoftReset(entry);
 
         TabControl.SelectedTab.TitleExtra = "Decompiled";
@@ -1398,25 +1584,30 @@ public class CUE4ParseViewModel : ViewModel
             if (dummy is not UClass || pointer.Object.Value is not UClass blueprint)
                 continue;
 
-            cppList.Add(blueprint.DecompileBlueprintToPseudo(cookedMetaData));
+            cppList.Add(blueprint.DecompileBlueprintToPseudo(pkg.Mappings, cookedMetaData));
         }
 
+        if (cppList.Count == 0) return false;
         var cpp = cppList.Count > 1 ? string.Join("\n\n", cppList) : cppList.FirstOrDefault() ?? string.Empty;
         if (entry.Path.Contains("_Verse.uasset"))
         {
             cpp = Regex.Replace(cpp, "__verse_0x[a-fA-F0-9]{8}_", ""); // UnmangleCasedName
         }
         cpp = Regex.Replace(cpp, @"CallFunc_([A-Za-z0-9_]+)_ReturnValue", "$1");
-
+        cpp = Regex.Replace(cpp, @"K2Node_DynamicCast_([A-Za-z0-9_]+)", "$1");
+        cpp = Regex.Replace(cpp, @"K2Node_([A-Za-z0-9_]+)", "$1");
 
         TabControl.SelectedTab.SetDocumentText(cpp, false, false);
+        return true;
     }
 
     private void SaveAndPlaySound(CancellationToken cancellationToken, string fullPath, string ext, byte[] data, bool saveAudio, bool updateUi)
     {
         if (fullPath.StartsWith('/')) fullPath = fullPath[1..];
-        var savedAudioPath = Path.Combine(UserSettings.Default.AudioDirectory,
-            UserSettings.Default.KeepDirectoryStructure ? fullPath : fullPath.SubstringAfterLast('/')).Replace('\\', '/') + $".{ext.ToLowerInvariant()}";
+        var extLower = ext.ToLowerInvariant();
+        var baseFilePath = UserSettings.Default.KeepDirectoryStructure ? fullPath : fullPath.SubstringAfterLast('/');
+        var combinedPath = Path.Combine(UserSettings.Default.AudioDirectory, baseFilePath);
+        var savedAudioPath = Path.ChangeExtension(combinedPath, extLower).Replace('\\', '/');
 
         if (saveAudio)
         {
@@ -1425,9 +1616,9 @@ public class CUE4ParseViewModel : ViewModel
             Directory.CreateDirectory(directory);
 
             bool conversionSuccess = true;
-            if (UserSettings.Default.ConvertAudioOnBulkExport)
+            if (UserSettings.Default.ConvertAudioOnBulkExport && extLower is not "wav")
             {
-                if (AudioPlayerViewModel.TryConvert(savedAudioPath, data, out string wavFilePath))
+                if (AudioPlayerViewModel.TryConvert(savedAudioPath, data, extLower, out string wavFilePath))
                     savedAudioPath = wavFilePath;
                 else
                 {
