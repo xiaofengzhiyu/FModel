@@ -45,7 +45,7 @@
                 </Viewbox>
             </MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="Save Folder's Packages Decompiled Blueprints (.cpp)"
+        <MenuItem Header="Save Folder's Packages Decompiled Blueprints (.hpp)"
                   Command="{Binding RightClickMenuCommand}">
             <MenuItem.CommandParameter>
                 <MultiBinding Converter="{x:Static converters:MultiParameterConverter.Instance}">

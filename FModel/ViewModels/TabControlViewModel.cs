@@ -411,8 +411,8 @@ public class TabItem : ViewModel
     }
     public void SaveDecompiled(bool updateUi)
     {
-        var fileName = Path.ChangeExtension(Entry.Name, ".cpp");
-        var directory = Path.Combine(UserSettings.Default.PropertiesDirectory,
+        var fileName = Path.ChangeExtension(Entry.Name, ".hpp");
+        var directory = Path.Combine(UserSettings.Default.CodeDirectory,
             UserSettings.Default.KeepDirectoryStructure ? Entry.Directory : "", fileName).Replace('\\', '/');
 
         Directory.CreateDirectory(directory.SubstringBeforeLast('/'));

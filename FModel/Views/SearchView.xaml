@@ -243,7 +243,7 @@
                                             </Viewbox>
                                         </MenuItem.Icon>
                                     </MenuItem>
-                                    <MenuItem Header="Save Decompiled Blueprint (.cpp)" Command="{Binding DataContext.mainApplication.RightClickMenuCommand}">
+                                    <MenuItem Header="Save Decompiled Blueprint (.hpp)" Command="{Binding DataContext.mainApplication.RightClickMenuCommand}">
                                         <MenuItem.CommandParameter>
                                             <MultiBinding Converter="{x:Static converters:MultiParameterConverter.Instance}">
                                                 <Binding Source="Save_Decompiled" />
@@ -614,7 +614,7 @@
                                             </Viewbox>
                                         </MenuItem.Icon>
                                     </MenuItem>
-                                    <MenuItem Header="Save Decompiled Blueprint (.cpp)" Command="{Binding DataContext.mainApplication.RightClickMenuCommand}">
+                                    <MenuItem Header="Save Decompiled Blueprint (.hpp)" Command="{Binding DataContext.mainApplication.RightClickMenuCommand}">
                                         <MenuItem.CommandParameter>
                                             <MultiBinding Converter="{x:Static converters:MultiParameterConverter.Instance}">
                                                 <Binding Source="Save_Decompiled" />

@@ -953,7 +953,7 @@
                                         </Viewbox>
                                     </MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Header="Save Decompiled Blueprint (.cpp)" Command="{Binding TabCommand}" CommandParameter="Save_Decompiled">
+                                <MenuItem Header="Save Decompiled Blueprint (.hpp)" Command="{Binding TabCommand}" CommandParameter="Save_Decompiled">
                                     <MenuItem.Icon>
                                         <Viewbox Width="16" Height="16">
                                             <Canvas Width="24" Height="24">

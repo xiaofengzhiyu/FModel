@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -1602,120 +1603,7 @@ public class CUE4ParseViewModel : ViewModel
         return true;
     }
 
-    public void ExportDecompiled(GameFile entry, bool updateUi)
-    {
-        var outputPath = Path.Combine(UserSettings.Default.CodeDirectory,
-            UserSettings.Default.KeepDirectoryStructure ? entry.Directory : "",
-            Path.GetFileNameWithoutExtension(entry.Name) + ".cpp").Replace('\\', '/');
-
-        Directory.CreateDirectory(outputPath.SubstringBeforeLast('/'));
-
-        UClassCookedMetaData cookedMetaData = null;
-        try
-        {
-            var editorPkg = Provider.LoadPackage(entry.Path.Replace(".uasset", ".o.uasset"));
-            cookedMetaData = editorPkg.GetExport<UClassCookedMetaData>("CookedClassMetaData");
-        }
-        catch
-        {
-            // ignored
-        }
-
-        var cppList = new List<string>();
-        var pkg = Provider.LoadPackage(entry);
-        for (var i = 0; i < pkg.ExportMapLength; i++)
-        {
-            var pointer = new FPackageIndex(pkg, i + 1).ResolvedObject;
-            if (pointer?.Object is null && pointer.Class?.Object?.Value is null)
-                continue;
-
-            var dummy = ((AbstractUePackage) pkg).ConstructObject(pointer.Class, pkg);
-            if (dummy is not UClass || pointer.Object.Value is not UClass blueprint)
-                continue;
-
-            cppList.Add(blueprint.DecompileBlueprintToPseudo(pkg.Mappings, cookedMetaData));
-        }
-
-        if (cppList.Count == 0) return false;
-        var cpp = cppList.Count > 1 ? string.Join("\n\n", cppList) : cppList.FirstOrDefault() ?? string.Empty;
-        if (entry.Path.Contains("_Verse.uasset"))
-        {
-            cpp = Regex.Replace(cpp, "__verse_0x[a-fA-F0-9]{8}_", ""); // UnmangleCasedName
-        }
-        cpp = Regex.Replace(cpp, @"CallFunc_([A-Za-z0-9_]+)_ReturnValue", "$1");
-        cpp = Regex.Replace(cpp, @"K2Node_DynamicCast_([A-Za-z0-9_]+)", "$1");
-        cpp = Regex.Replace(cpp, @"K2Node_([A-Za-z0-9_]+)", "$1");
-
-
-        TabControl.SelectedTab.SetDocumentText(cpp, false, false);
-        return true;
-    }
-
-    public void ExportDecompiled(GameFile entry, bool updateUi)
-    {
-        var outputPath = Path.Combine(UserSettings.Default.CodeDirectory,
-            UserSettings.Default.KeepDirectoryStructure ? entry.Directory : "",
-            Path.GetFileNameWithoutExtension(entry.Name) + ".cpp").Replace('\\', '/');
-
-        Directory.CreateDirectory(outputPath.SubstringBeforeLast('/'));
-
-        UClassCookedMetaData cookedMetaData = null;
-        try
-        {
-            var editorPkg = Provider.LoadPackage(entry.Path.Replace(".uasset", ".o.uasset"));
-            cookedMetaData = editorPkg.GetExport<UClassCookedMetaData>("CookedClassMetaData");
-        }
-        catch
-        {
-            // ignored
-        }
-
-        var cppList = new List<string>();
-        var pkg = Provider.LoadPackage(entry);
-        for (var i = 0; i < pkg.ExportMapLength; i++)
-        {
-            var pointer = new FPackageIndex(pkg, i + 1).ResolvedObject;
-            if (pointer?.Object is null && pointer.Class?.Object?.Value is null)
-                continue;
-
-            var dummy = ((AbstractUePackage) pkg).ConstructObject(pointer.Class, pkg);
-            if (dummy is not UClass || pointer.Object.Value is not UClass blueprint)
-                continue;
-
-            cppList.Add(blueprint.DecompileBlueprintToPseudo(cookedMetaData));
-        }
-
-        var cpp = cppList.Count > 1 ? string.Join("\n\n", cppList) : cppList.FirstOrDefault() ?? string.Empty;
-        if (entry.Path.Contains("_Verse.uasset"))
-        {
-            cpp = Regex.Replace(cpp, "__verse_0x[a-fA-F0-9]{8}_", ""); // UnmangleCasedName
-        }
-        cpp = Regex.Replace(cpp, @"CallFunc_([A-Za-z0-9_]+)_ReturnValue", "$1");
-
-        File.WriteAllText(outputPath, cpp);
-
-        if (File.Exists(outputPath))
-        {
-            Interlocked.Increment(ref ExportedCount);
-            Log.Information("{FileName} successfully saved", entry.Name);
-            if (updateUi)
-            {
-                FLogger.Append(ELog.Information, () =>
-                {
-                    FLogger.Text("Successfully saved ", Constants.WHITE);
-                    FLogger.Link(entry.Name, outputPath, true);
-                });
-            }
-        }
-        else
-        {
-            Interlocked.Increment(ref FailedExportCount);
-            Log.Error("{FileName} could not be saved", entry.Name);
-            if (updateUi)
-                FLogger.Append(ELog.Error, () => FLogger.Text($"Could not save '{entry.Name}'", Constants.WHITE, true));
-        }
-    }
-
+    
     private void SaveAndPlaySound(CancellationToken cancellationToken, string fullPath, string ext, byte[] data, bool saveAudio, bool updateUi)
     {
         if (fullPath.StartsWith('/')) fullPath = fullPath[1..];

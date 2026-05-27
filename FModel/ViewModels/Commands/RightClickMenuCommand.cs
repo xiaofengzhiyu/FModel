@@ -107,12 +107,11 @@ public class RightClickMenuCommand : ViewModelCommand<ApplicationViewModel>
             {
                 EBulkType.Raw => (UserSettings.Default.RawDataDirectory, "files"),
                 EBulkType.Properties => (UserSettings.Default.PropertiesDirectory, "json files"),
-                EBulkType.Code => (UserSettings.Default.CodeDirectory, "cpp files"),
+                EBulkType.Code => (UserSettings.Default.CodeDirectory, "hpp files"),
                 EBulkType.Textures => (UserSettings.Default.TextureDirectory, "textures"),
                 EBulkType.Meshes => (UserSettings.Default.ModelDirectory, "models"),
                 EBulkType.Animations => (UserSettings.Default.ModelDirectory, "animations"),
                 EBulkType.Audio => (UserSettings.Default.AudioDirectory, "audio files"),
-                EBulkType.Code => (UserSettings.Default.CodeDirectory, "code files"),
                 _ => (null, null),
             };
 
@@ -137,7 +136,6 @@ public class RightClickMenuCommand : ViewModelCommand<ApplicationViewModel>
             Action<GameFile, EBulkType, bool> fileAction = bulktype switch
             {
                 EBulkType.Raw => (entry, _, update) => contextViewModel.CUE4Parse.ExportData(entry, !update),
-                EBulkType.Code => (entry, bulk, update) => contextViewModel.CUE4Parse.ExportDecompiled(entry, update),
                 _ => (entry, bulk, update) => contextViewModel.CUE4Parse.Extract(cancellationToken, entry, false, bulk),
             };
 
