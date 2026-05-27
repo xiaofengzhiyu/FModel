@@ -80,10 +80,14 @@ public class FileToGeometryConverter : IMultiValueConverter
                 "bin" => ("DataTableIcon", "BinaryBrush"),
                 "xml" => ("XmlIcon", "JsonXmlBrush"),
                 "gitignore" => ("GitIcon", "GitBrush"),
+                "gitattributes" => ("GitIcon", "GitBrush"),
                 "html" => ("HtmlIcon", "HtmlBrush"),
                 "js" => ("JavaScriptIcon", "JavaScriptBrush"),
                 "css" => ("CssIcon", "CssBrush"),
                 "csv" => ("CsvIcon", "CsvBrush"),
+                "sql" => ("SQLIcon", "SQLBrush"),
+                "py" => ("PythonIcon", "PythonBrush"),
+                "cs" => ("CSharpIcon", "CSharpBrush"),
                 _ => ("DataTableIcon", "NeutralBrush")
             },
 
@@ -91,6 +95,9 @@ public class FileToGeometryConverter : IMultiValueConverter
 
             EAssetCategory.Borderlands => ("BorderlandsIcon", "BorderlandsBrush"),
             EAssetCategory.Aion2 => ("AionIcon", "AionBrush"),
+            EAssetCategory.RocoKingdomWorld => ("RocoKingdomWorldIcon", "RocoKingdomWorldBrush"),
+            EAssetCategory.DeltaForce => ("DeltaForceIcon", "DeltaForceBrush"),
+            EAssetCategory.LegoBatman => ("BatmanIcon", "BatmanBrush"),
 
             _ => ("AssetIcon", "NeutralBrush")
         };

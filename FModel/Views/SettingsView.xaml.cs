@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using CUE4Parse.UE4.Lua.unluac;
 using FModel.Services;
 using FModel.Settings;
 using FModel.ViewModels;
@@ -61,6 +62,8 @@ public partial class SettingsView
 
         _applicationView.CUE4Parse.Provider.ReadScriptData = UserSettings.Default.ReadScriptData;
         _applicationView.CUE4Parse.Provider.ReadShaderMaps = UserSettings.Default.ReadShaderMaps;
+
+        UserSettings.Save();
     }
 
     private void OnBrowseOutput(object sender, RoutedEventArgs e)
@@ -74,6 +77,7 @@ public partial class SettingsView
         UserSettings.Default.PropertiesDirectory = path;
         UserSettings.Default.TextureDirectory = path;
         UserSettings.Default.AudioDirectory = path;
+        UserSettings.Default.CodeDirectory = path;
     }
 
     private void OnBrowseDirectories(object sender, RoutedEventArgs e)
@@ -270,5 +274,22 @@ public partial class SettingsView
             return;
 
         Process.Start(new ProcessStartInfo(hyperlink.NavigateUri.AbsoluteUri) { UseShellExecute = true });
+    }
+
+    private async void OnDecompileLuaChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox { IsChecked: true } && UnluacHelper.Instance is null)
+            await ApplicationViewModel.InitUnluac();
+    }
+
+    private void OnUnluacFlagChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox cb || cb.Tag is not string name) return;
+        if (!Enum.TryParse<EUnluacFlags>(name, true, out var flag)) return;
+
+        var current = UserSettings.Default.UnluacFlags;
+        var isChecked = cb.IsChecked == true;
+
+        UserSettings.Default.UnluacFlags = isChecked ? (current | flag) : (current & ~flag);
     }
 }

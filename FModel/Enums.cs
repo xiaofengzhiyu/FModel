@@ -161,4 +161,13 @@ public enum EAssetCategory : uint
     GameSpecific = AssetCategoryExtensions.CategoryBase + (10 << 16),
         Borderlands = GameSpecific + 1,
         Aion2 = GameSpecific + 2,
+        RocoKingdomWorld = GameSpecific + 3,
+        DeltaForce = GameSpecific + 4,
+        LegoBatman = GameSpecific + 5,
+}
+
+public enum EUnluacMode
+{
+    Decompile,
+    Disassemble,
 }

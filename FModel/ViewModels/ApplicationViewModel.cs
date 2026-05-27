@@ -9,6 +9,7 @@ using System.Windows;
 using CUE4Parse_Conversion.Textures.BC;
 using CUE4Parse.Compression;
 using CUE4Parse.Encryption.Aes;
+using CUE4Parse.UE4.Lua.unluac;
 using CUE4Parse.UE4.Objects.Core.Misc;
 using CUE4Parse.UE4.VirtualFileSystem;
 using FModel.Extensions;
@@ -104,7 +105,7 @@ public class ApplicationViewModel : ViewModel
         if (UserSettings.Default.CurrentDir is null)
         {
             //If no game is selected, many things will break before a shutdown request is processed in the normal way.
-            //A hard exit is preferable to an unhandled expection in this case
+            //A hard exit is preferable to an unhandled exception in this case
             Environment.Exit(0);
         }
 
@@ -126,7 +127,6 @@ public class ApplicationViewModel : ViewModel
             if (sender is not IAesVfsReader reader) return;
             CUE4Parse.GameDirectory.Disable(reader);
         };
-
         CustomDirectories = new CustomDirectoriesViewModel();
         SettingsView = new SettingsViewModel();
         AesManager = new AesManagerViewModel(CUE4Parse);
@@ -347,5 +347,13 @@ public class ApplicationViewModel : ViewModel
         }
 
         DetexHelper.Initialize(detexPath);
+    }
+
+    public static async Task InitUnluac()
+    {
+        var unluacPath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", UnluacHelper.DllName);
+        await UnluacHelper.InitializeAsync(unluacPath).ConfigureAwait(false);
+        if (UnluacHelper.Instance is null)
+            FLogger.Append(ELog.Error, () => FLogger.Text("Failed to download unluac", Constants.WHITE, true));
     }
 }
