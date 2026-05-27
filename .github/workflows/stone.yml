@@ -40,7 +40,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: .NET Restore
-        run: dotnet restore FModel
+        run: dotnet restore ./FModel/FModel.csproj
 
       - name: .NET Publish
         run: dotnet publish "./FModel/FModel.csproj" -c ${{ github.event.inputs.buildConfig }} --no-restore --no-self-contained -r ${{ github.event.inputs.runtimeIdentifier }} -f net8.0-windows -o "./FModel/bin/Publish/" -p:PublishReadyToRun=false -p:PublishSingleFile=${{ github.event.inputs.publishSingleFile }} -p:DebugType=None -p:GenerateDocumentationFile=false -p:DebugSymbols=false
