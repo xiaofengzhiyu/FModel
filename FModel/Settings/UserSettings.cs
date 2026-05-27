@@ -159,6 +159,13 @@ namespace FModel.Settings
             set => SetProperty(ref _modelDirectory, value);
         }
 
+        private string _codeDirectory;
+        public string CodeDirectory
+        {
+            get => _codeDirectory;
+            set => SetProperty(ref _codeDirectory, value);
+        }
+
         private string _gameDirectory = string.Empty;
         public string GameDirectory
         {

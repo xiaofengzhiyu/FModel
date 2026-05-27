@@ -65,6 +65,7 @@ public class RightClickMenuCommand : ViewModelCommand<ApplicationViewModel>
 
             "Save_Data" => (EAction.Export, EShowAssetType.None, EBulkType.Raw),
             "Save_Properties" => (EAction.Export, EShowAssetType.None, EBulkType.Properties),
+            "Save_Decompiled" => (EAction.Export, EShowAssetType.Decompile, EBulkType.Code),
             "Save_Textures" => (EAction.Export, EShowAssetType.None, EBulkType.Textures),
             "Save_Models" => (EAction.Export, EShowAssetType.None, EBulkType.Meshes),
             "Save_Animations" => (EAction.Export, EShowAssetType.None, EBulkType.Animations),
@@ -105,6 +106,7 @@ public class RightClickMenuCommand : ViewModelCommand<ApplicationViewModel>
             {
                 EBulkType.Raw => (UserSettings.Default.RawDataDirectory, "files"),
                 EBulkType.Properties => (UserSettings.Default.PropertiesDirectory, "json files"),
+                EBulkType.Code => (UserSettings.Default.CodeDirectory, "cpp files"),
                 EBulkType.Textures => (UserSettings.Default.TextureDirectory, "textures"),
                 EBulkType.Meshes => (UserSettings.Default.ModelDirectory, "models"),
                 EBulkType.Animations => (UserSettings.Default.ModelDirectory, "animations"),
@@ -133,6 +135,7 @@ public class RightClickMenuCommand : ViewModelCommand<ApplicationViewModel>
             Action<GameFile, EBulkType, bool> fileAction = bulktype switch
             {
                 EBulkType.Raw => (entry, _, update) => contextViewModel.CUE4Parse.ExportData(entry, !update),
+                EBulkType.Code => (entry, bulk, update) => contextViewModel.CUE4Parse.ExportDecompiled(entry, update),
                 _ => (entry, bulk, update) => contextViewModel.CUE4Parse.Extract(cancellationToken, entry, false, bulk),
             };
 
