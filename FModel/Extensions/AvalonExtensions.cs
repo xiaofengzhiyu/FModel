@@ -1,10 +1,18 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Xml;
+using FModel.Extensions.Themes;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 
 namespace FModel.Extensions;
+
+public sealed record HighlightColor
+(
+    string Foreground,
+    bool Bold = false,
+    bool Italic = false
+);
 
 public static class AvalonExtensions
 {
@@ -49,9 +57,11 @@ public static class AvalonExtensions
             case "bat":
             case "txt":
             case "pem":
+            case "js":
             case "po":
                 return null;
             default:
+                _jsonHighlighter.ApplyJsonTheme(Settings.UserSettings.Default.JsonHighlightTheme);
                 return _jsonHighlighter;
         }
     }

@@ -22,6 +22,7 @@ using FModel.Views.Resources.Controls;
 using MessageBox = AdonisUI.Controls.MessageBox;
 using MessageBoxButton = AdonisUI.Controls.MessageBoxButton;
 using MessageBoxImage = AdonisUI.Controls.MessageBoxImage;
+using System.Runtime.Intrinsics.X86;
 
 namespace FModel.ViewModels;
 
@@ -58,6 +59,13 @@ public class ApplicationViewModel : ViewModel
 
             SetProperty(ref _isAssetsExplorerVisible, value);
         }
+    }
+
+    private bool _isUpdateAvailable;
+    public bool IsUpdateAvailable
+    {
+        get => _isUpdateAvailable;
+        internal set => SetProperty(ref _isUpdateAvailable, value);
     }
 
     private int _selectedLeftTabIndex;
@@ -138,7 +146,7 @@ public class ApplicationViewModel : ViewModel
     public DirectorySettings AvoidEmptyGameDirectory(bool bAlreadyLaunched)
     {
         var gameDirectory = UserSettings.Default.GameDirectory;
-        if (!bAlreadyLaunched && UserSettings.Default.PerDirectory.TryGetValue(gameDirectory, out var currentDir))
+        if (!bAlreadyLaunched && GameSelectorViewModel.IsGameDirectoryAvailable(gameDirectory) && UserSettings.Default.PerDirectory.TryGetValue(gameDirectory, out var currentDir))
             return currentDir;
 
         Status.SetStatus(EStatusKind.Configuring);
@@ -265,15 +273,8 @@ public class ApplicationViewModel : ViewModel
             {
                 var zipDir = Path.GetDirectoryName(vgmZipFilePath)!;
                 await using var zipFs = File.OpenRead(vgmZipFilePath);
-                using var zip = new ZipArchive(zipFs, ZipArchiveMode.Read);
-
-                foreach (var entry in zip.Entries)
-                {
-                    var entryPath = Path.Combine(zipDir, entry.FullName);
-                    await using var entryFs = File.Create(entryPath);
-                    await using var entryStream = entry.Open();
-                    await entryStream.CopyToAsync(entryFs);
-                }
+                await using var zip = await ZipArchive.CreateAsync(zipFs, ZipArchiveMode.Read, true, null);
+                await zip.ExtractToDirectoryAsync(zipDir, true);
             }
             else
             {
@@ -299,15 +300,16 @@ public class ApplicationViewModel : ViewModel
 
     public static async Task InitOodle()
     {
+        if (!Avx2.IsSupported)
+            return;
+
         var oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_NAME_OLD);
         if (!File.Exists(oodlePath))
         {
             oodlePath = Path.Combine(UserSettings.Default.OutputDirectory, ".data", OodleHelper.OODLE_NAME_CURRENT);
         }
 
-        OodleHelper.Initialize(oodlePath);
-        if (OodleHelper.Instance is null)
-            FLogger.Append(ELog.Error, () => FLogger.Text("Failed to download Oodle", Constants.WHITE, true));
+        await OodleHelper.InitializeAsync(oodlePath);
     }
 
     public static async Task InitZlib()
@@ -319,12 +321,12 @@ public class ApplicationViewModel : ViewModel
         {
             if (!await ZlibHelper.DownloadDllAsync(zlibPath))
             {
-                FLogger.Append(ELog.Error, () => FLogger.Text("Failed to download Zlib-ng", Constants.WHITE, true));
+                zlibFileInfo.Refresh();
                 if (!zlibFileInfo.Exists) return;
             }
         }
 
-        ZlibHelper.Initialize(zlibPath);
+        await ZlibHelper.InitializeAsync(zlibPath);
     }
 
     public static async Task InitDetex()
